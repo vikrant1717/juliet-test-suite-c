@@ -15,10 +15,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Download Juliet Test Suite
-      - name: Download Juliet Test Suite
+      # 2. Clone public Juliet Test Suite
+      - name: Clone Juliet Test Suite
         run: |
-          git clone --depth 1 https://github.com/codesecurity/Juliet-Test-Suite-C-Cpp.git JulietTestSuite
+          git clone --depth 1 https://github.com/vikrant1717/juliet-test-suite-c.git JulietTestSuite
           ls -la JulietTestSuite
 
       # 3. Setup Python (optional, for juliet.py preprocessing)

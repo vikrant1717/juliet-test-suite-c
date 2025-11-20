@@ -3,8 +3,6 @@ name: SonarQube
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    types: [opened, synchronize, reopened]
 
 jobs:
   build:
@@ -14,53 +12,36 @@ jobs:
 
     steps:
 
-      # Checkout repository
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Install SonarQube Build Wrapper
       - name: Install Build Wrapper
         uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
 
-      # FIX: Build Wrapper is stored in this temp folder, manually add to PATH
       - name: Add Build Wrapper to PATH
         run: |
           echo "/home/runner/work/_temp/build-wrapper-linux-x86" >> $GITHUB_PATH
           ls -la /home/runner/work/_temp/build-wrapper-linux-x86
 
-      # Verify wrapper installation
-      - name: Verify Build Wrapper
-        run: |
-          which build-wrapper-linux-x86-64
-          build-wrapper-linux-x86-64 --version
-
-      # Setup Python (cheribuild is Python script)
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      # Install dependencies needed for Juliet suite + cheribuild
-      - name: Install CHERI & build tools
+      - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang make python3 python3-pip
+          sudo apt-get install -y cmake make gcc g++ ninja-build
 
-      # Run Build Wrapper with cheribuild
-      - name: Run Build Wrapper + cheribuild
+      # Juliet NORMAL build (not CHERI)
+      - name: Run Build Wrapper with CMake
         run: |
-          which build-wrapper-linux-x86-64
-          build-wrapper-linux-x86-64 \
-            --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} \
-            python3 cheribuild.py juliet-c-cheri --build-and-test
+          mkdir build
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} \
+            cmake -S . -B build
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} \
+            cmake --build build -j 2
 
-      # Verify compile_commands.json
       - name: Check compile_commands.json
         run: |
           ls -la ${{ env.BUILD_WRAPPER_OUT_DIR }}
-          cat ${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json | head -n 20
 
-      # Run SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:

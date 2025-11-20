@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory
-      JULIET_DIR: JulietTestSuite  # Adjust if juliet.py is in a subfolder
+      JULIET_DIR: JulietTestSuite  # Adjust to the folder where juliet.py exists
 
     steps:
       # 1. Checkout repository
@@ -28,7 +28,6 @@ jobs:
       - name: Add Build Wrapper to PATH
         run: |
           echo "/home/runner/work/_temp/build-wrapper-linux-x86" >> $GITHUB_PATH
-          ls -la /home/runner/work/_temp/build-wrapper-linux-x86
 
       # 4. Verify Build Wrapper
       - name: Verify Build Wrapper
@@ -50,7 +49,7 @@ jobs:
           python3 -m pip install pyyaml
 
       # 7. Verify juliet.py exists
-      - name: List repository files
+      - name: List Juliet folder
         run: |
           ls -la ${{ env.JULIET_DIR }}
 
@@ -60,7 +59,7 @@ jobs:
           cd ${{ env.JULIET_DIR }}
           python3 juliet.py --cmake --build --all --no-run --no-support --dry-run
 
-      # 9. Run Build Wrapper + juliet.py
+      # 9. Run Build Wrapper + juliet.py safely
       - name: Build Wrapper + Juliet (skip support)
         run: |
           cd ${{ env.JULIET_DIR }}

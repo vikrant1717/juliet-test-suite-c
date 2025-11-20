@@ -1,37 +1,14 @@
-name: SonarQube Scan (No Build)
-
-on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-jobs:
-  sonar:
-    runs-on: ubuntu-latest
-
-    steps:
       # 1. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Python (optional if juliet.py preprocessing needed)
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      # 3. Install Python dependencies if juliet.py is used
-      - name: Install Python dependencies
+      # 2. Download Juliet Test Suite
+      - name: Download Juliet Test Suite
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pyyaml
-
-      # 4. Verify Juliet folder and files
-      - name: List Juliet folder
-        run: |
+          git clone --depth 1 https://github.com/codesecurity/Juliet-Test-Suite-C-Cpp.git JulietTestSuite
           ls -la JulietTestSuite
 
-      # 5. SonarQube scan (no build-wrapper)
+      # 3. SonarQube scan
       - name: Run SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:

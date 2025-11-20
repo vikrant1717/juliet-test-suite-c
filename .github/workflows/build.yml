@@ -9,74 +9,30 @@ on:
 jobs:
   sonar:
     runs-on: ubuntu-latest
-    env:
-      BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory
-      JULIET_DIR: JulietTestSuite  # Adjust to the folder where juliet.py exists
 
     steps:
       # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # 2. Install Build Wrapper
-      - name: Install Build Wrapper
-        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
-
-      # 3. Add Build Wrapper to PATH
-      - name: Add Build Wrapper to PATH
-        run: |
-          echo "/home/runner/work/_temp/build-wrapper-linux-x86" >> $GITHUB_PATH
-
-      # 4. Verify Build Wrapper
-      - name: Verify Build Wrapper
-        run: |
-          which build-wrapper-linux-x86-64
-          build-wrapper-linux-x86-64 --version
-
-      # 5. Setup Python
+      # 2. Setup Python (optional if juliet.py preprocessing needed)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 6. Install build dependencies
-      - name: Install C/C++ build tools and Python deps
+      # 3. Install dependencies if needed
+      - name: Install Python deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake make gcc g++ ninja-build python3-pip
           python3 -m pip install --upgrade pip
           python3 -m pip install pyyaml
 
-      # 7. Verify juliet.py exists
-      - name: List Juliet folder
-        run: |
-          ls -la ${{ env.JULIET_DIR }}
-
-      # 8. Dry-run juliet.py to ensure it works
-      - name: Dry-run juliet.py
-        run: |
-          cd ${{ env.JULIET_DIR }}
-          python3 juliet.py --cmake --build --all --no-run --no-support --dry-run
-
-      # 9. Run Build Wrapper + juliet.py safely
-      - name: Build Wrapper + Juliet (skip support)
-        run: |
-          cd ${{ env.JULIET_DIR }}
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} \
-            python3 juliet.py --cmake --build --all --no-run --no-support
-
-      # 10. Verify compile_commands.json
-      - name: Check compile_commands.json
-        run: |
-          ls -la ${{ env.BUILD_WRAPPER_OUT_DIR }}
-          head -n 20 ${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json || echo "File not found"
-
-      # 11. SonarQube scan
+      # 4. SonarQube scan (no build-wrapper)
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            --define sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json
+            -Dsonar.projectKey=JulietC
+            -Dsonar.sources=.
+            -Dsonar.cfamily.build-wrapper-output=

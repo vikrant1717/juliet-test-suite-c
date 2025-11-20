@@ -1,29 +1,55 @@
 name: SonarQube
 on:
   push:
-    branches:
-      - master
+    branches: [ "master" ]
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
   build:
-    name: Build and analyze
     runs-on: ubuntu-latest
     env:
-      BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory # Directory where build-wrapper output will be placed
+      BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
+      # Install Build Wrapper
       - name: Install Build Wrapper
+        id: bw
         uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
+
+      # Add BW to PATH
+      - name: Add Build Wrapper to PATH
+        run: |
+          echo "${{ steps.bw.outputs.build-wrapper-bin }}" >> $GITHUB_PATH
+          ls -la "${{ steps.bw.outputs.build-wrapper-bin }}"
+
+      # Ensure Python is available (cheribuild uses Python)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # Install CHERI build dependencies (required!)
+      - name: Install CHERI build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang make python3 python3-pip
+
+      # Run Build Wrapper with cheribuild
       - name: Run Build Wrapper
         run: |
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cheribuild.py juliet-c-cheri --build-and-test
+          which build-wrapper-linux-x86-64
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} \
+            python3 cheribuild.py juliet-c-cheri --build-and-test
+
+      # SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            --define "sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
+            --define sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json

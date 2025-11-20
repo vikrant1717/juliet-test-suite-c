@@ -3,6 +3,8 @@ name: SonarQube
 on:
   push:
     branches: [ "master" ]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
@@ -11,37 +13,51 @@ jobs:
       BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory
 
     steps:
-
+      # 1. Checkout repository
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # 2. Install SonarQube Build Wrapper
       - name: Install Build Wrapper
         uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
 
+      # 3. Add Build Wrapper to PATH manually
       - name: Add Build Wrapper to PATH
         run: |
           echo "/home/runner/work/_temp/build-wrapper-linux-x86" >> $GITHUB_PATH
           ls -la /home/runner/work/_temp/build-wrapper-linux-x86
 
-      - name: Install tools
+      # 4. Verify build-wrapper
+      - name: Verify Build Wrapper
+        run: |
+          which build-wrapper-linux-x86-64
+          build-wrapper-linux-x86-64 --version
+
+      # 5. Setup Python (for juliet.py)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # 6. Install build dependencies
+      - name: Install C/C++ build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake make gcc g++ ninja-build
+          sudo apt-get install -y cmake make gcc g++ ninja-build python3-pip
 
-      # Juliet NORMAL build (not CHERI)
-      - name: Run Build Wrapper with CMake
+      # 7. Run Build Wrapper + juliet.py (skip support library)
+      - name: Run Build Wrapper with Juliet (skip support)
         run: |
-          mkdir build
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} \
-            cmake -S . -B build
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} \
-            cmake --build build -j 2
+            python3 juliet.py --cmake --build --all --no-run --no-support
 
+      # 8. Verify compile_commands.json
       - name: Check compile_commands.json
         run: |
           ls -la ${{ env.BUILD_WRAPPER_OUT_DIR }}
+          head -n 20 ${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json || echo "File not found"
 
+      # 9. SonarQube scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:

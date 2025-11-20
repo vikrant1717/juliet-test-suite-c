@@ -1,4 +1,4 @@
-name: SonarQube
+name: SonarQube Scan (No Build)
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
+      # 1. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -20,19 +20,27 @@ jobs:
         with:
           python-version: "3.10"
 
-      # 3. Install dependencies if needed
-      - name: Install Python deps
+      # 3. Install Python dependencies if juliet.py is used
+      - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install pyyaml
 
-      # 4. SonarQube scan (no build-wrapper)
-      - name: SonarQube Scan
+      # 4. Verify Juliet folder and files
+      - name: List Juliet folder
+        run: |
+          ls -la JulietTestSuite
+
+      # 5. SonarQube scan (no build-wrapper)
+      - name: Run SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
             -Dsonar.projectKey=JulietC
-            -Dsonar.sources=.
+            -Dsonar.projectName="Juliet C Test Suite"
+            -Dsonar.sources=JulietTestSuite
+            -Dsonar.host.url=https://your-sonarqube-server
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
             -Dsonar.cfamily.build-wrapper-output=

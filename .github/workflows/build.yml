@@ -1,4 +1,4 @@
-name: SonarQube Scan (No Build)
+name: SonarQube Scan (Juliet C Test Suite)
 
 on:
   push:
@@ -46,6 +46,6 @@ jobs:
             -Dsonar.projectKey=JulietC
             -Dsonar.projectName="Juliet C Test Suite"
             -Dsonar.sources=JulietTestSuite
-            -Dsonar.host.url=https://your-sonarqube-server
+            -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
             -Dsonar.cfamily.build-wrapper-output=
